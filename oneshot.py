@@ -608,6 +608,13 @@ class Companion:
             csvWriter.writerow([dateStr, bssid, essid, wps_pin, wpa_psk])
         print(f'[i] Credentials saved to {filename}.txt, {filename}.csv')
 
+        # if os == android:
+        #    # if previously connected to wifi
+        #    if keeppreviousconn == true:
+        #      # cmd wifi add-network {ssid} wpa2 {pass} -b {bssid} -d -r non_persistent
+        #    else:
+        #      # cmd wifi connect-network {ssid} wpa2 {pass} -b {bssid} -d -r non_persistent
+
     def __savePin(self, bssid, pin):
         filename = self.pixiewps_dir + '{}.run'.format(bssid.replace(':', '').upper())
         with open(filename, 'w') as file:
@@ -1185,6 +1192,10 @@ if __name__ == '__main__':
     if os.getuid() != 0:
         die("Run it as root")
 
+    # todo: move this interface up/down mechanism
+    # we should only up/down interface when attacking (when valid bssid is found/specified)
+    # otherwise the wifi is disabled for no reason
+    
     if args.mtk_wifi:
         wmtWifi_device = Path("/dev/wmtWifi")
         if not wmtWifi_device.is_char_device():
@@ -1192,9 +1203,9 @@ if __name__ == '__main__':
                 "/dev/wmtWifi does not exist or it is not a character device")
         wmtWifi_device.chmod(0o644)
         wmtWifi_device.write_text("1")
-
-    if not ifaceUp(args.interface):
-        die('Unable to up interface "{}"'.format(args.interface))
+    
+    #if not ifaceUp(args.interface):
+    #    die('Unable to up interface "{}"'.format(args.interface))
 
     while True:
         try:
@@ -1215,11 +1226,17 @@ if __name__ == '__main__':
 
                 if args.bssid:
                     companion = Companion(args.interface, args.write, print_debug=args.verbose)
+                    # if os == "android" and manual_iface != true
+                    #   svc wifi disable
+                    #    if iface is down, recreate iface (only if --mtk-iface or --iface-up "cmd")
+                    
                     if args.bruteforce:
                         companion.smart_bruteforce(args.bssid, args.pin, args.delay)
                     else:
                         companion.single_connection(args.bssid, args.pin, args.pixie_dust,
                                                     args.show_pixie_cmd, args.pixie_force)
+                    # if os == "android" and manual_iface != true and if iface_down != "" (will leave it as is)
+                    #     svc wifi enable
             if not args.loop:
                 break
             else:
